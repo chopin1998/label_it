@@ -8,7 +8,7 @@ from PyQt5.QtCore import pyqtSignal, Qt, QPoint, QRectF
 class ImageViewer(QGraphicsView):
     photoClicked = pyqtSignal(QPoint)
 
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super(ImageViewer, self).__init__(parent)
         self._zoom = 0
         self._empty = True

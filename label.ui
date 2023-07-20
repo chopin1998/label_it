@@ -55,23 +55,8 @@
    <property name="frameShadow">
     <enum>QFrame::Plain</enum>
    </property>
-   <widget class="QWidget" name="verticalLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>230</x>
-      <y>270</y>
-      <width>201</width>
-      <height>131</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="pictureLayout" stretch="">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetMaximumSize</enum>
-     </property>
-    </layout>
-   </widget>
   </widget>
-  <widget class="QFrame" name="KVFrame">
+  <widget class="QFrame" name="kvFrame">
    <property name="geometry">
     <rect>
      <x>825</x>

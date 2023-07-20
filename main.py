@@ -5,12 +5,12 @@ import sys
 import glob
 
 from PyQt5 import uic
-from PyQt5.QtWidgets import QWidget, QApplication, QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame
+from PyQt5.QtWidgets import QWidget, QApplication, QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame, QVBoxLayout
 from PyQt5.QtGui import QColor,  QBrush, QPixmap
 from PyQt5.QtCore import pyqtSignal, Qt, QPoint, QRectF, QTimer
 
 from imageviewer import ImageViewer
-
+from kvwidget import KeyValueWidget
 
 from paddleocr import PaddleOCR
 
@@ -31,14 +31,21 @@ class LabelIt( QWidget ):
         # init ui #
         self.ui = uic.loadUi('label.ui', self)
 
-        self.image_viewer = ImageViewer(parent=self.ui.pictureFrame)
-        self.ui.pictureLayout.addWidget(self.image_viewer)
-        self.ui.pictureFrame.setLayout(self.ui.pictureLayout)
-        # self.ui.pictureLayout.setContentsMargins(0, 0, 0, 0)
+        self.image_viewer = ImageViewer()
+        viewer_layout = QVBoxLayout(self.ui.pictureFrame)       
+        viewer_layout.addWidget(self.image_viewer)
+        self.ui.pictureFrame.setLayout(viewer_layout)
+        
         self.ui.loadBtn.clicked.connect(self.choose_dir)
         self.ui.prevBtn.clicked.connect(lambda: self.show_image(self.image_index - 1))
         self.ui.nextBtn.clicked.connect(lambda: self.show_image(self.image_index + 1))
-
+        
+        self.kvwidget = KeyValueWidget()
+        kv_layout = QVBoxLayout(self.ui.kvFrame)
+        kv_layout.addWidget(self.kvwidget)
+        kv_layout.setContentsMargins(0, 0, 0, 0)
+        self.ui.kvFrame.setLayout(kv_layout)
+        
         ###########
 
         _timer = QTimer()
@@ -64,11 +71,6 @@ class LabelIt( QWidget ):
         img_file = os.path.join(self.image_path, self.images_list[index])
         self.image_index = index
         self.image_viewer.set_photo(QPixmap(img_file))
-
-        self.load_json()
-
-    def load_json(self):
-        pass
 
 
 
