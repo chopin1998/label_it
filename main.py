@@ -93,6 +93,10 @@ class LabelIt( QWidget ):
                 data = json.load(f)
                 self.kvwidget.set_pairs(data)
                 print('load json', data)
+        else:
+            for i in range(self.kvwidget.value_list.count()):
+                self.kvwidget.value_list.item(i).setText(' ')
+                
 
     def slot_kv_item_modified(self, item):
         # print(item)
