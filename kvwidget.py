@@ -102,7 +102,10 @@ class KeyValueWidget(QWidget):
         self.item_modified.emit(self.gen_all_pairs())
 
     def set_pairs(self, pairs:dict):
-        for k, v in pairs:
+        self.key_list.clear()
+        self.value_list.clear()
+        for k, v in pairs.items():
+            # print(k, v)
             self.key_list.addItem(k)
             self.value_list.addItem(v)
 

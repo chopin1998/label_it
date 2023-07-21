@@ -34,6 +34,11 @@
   <property name="windowTitle">
    <string>Label it ! Haha</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">selection-color: rgb(220, 128, 220);
+selection-background-color: rgb(250, 240, 100);
+background-color: rgb(192, 200, 192);</string>
+  </property>
   <widget class="QFrame" name="pictureFrame">
    <property name="geometry">
     <rect>
@@ -216,7 +221,7 @@
      </spacer>
     </item>
     <item>
-     <widget class="QCheckBox" name="autosaveCheckBox">
+     <widget class="QCheckBox" name="autoSaveChk">
       <property name="enabled">
        <bool>false</bool>
       </property>

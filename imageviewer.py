@@ -69,7 +69,7 @@ class ImageViewer(QGraphicsView):
             tf = self.transform()
             current_scale = min(tf.m11(), tf.m22())
             if current_scale > 2 and factor > 1:
-                print('zoom limited')
+                # print('zoom limited')
                 # self.parent().parent().setWindowTitle('zoom limited')
                 self._zoom -= 1
             else:

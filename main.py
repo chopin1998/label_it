@@ -3,6 +3,7 @@
 import os
 import sys
 import glob
+import json
 
 from PyQt5 import uic
 from PyQt5.QtWidgets import QWidget, QApplication, QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame, QVBoxLayout
@@ -43,8 +44,10 @@ class LabelIt( QWidget ):
         self.kvwidget = KeyValueWidget()
         kv_layout = QVBoxLayout(self.ui.kvFrame)
         kv_layout.addWidget(self.kvwidget)
-        kv_layout.setContentsMargins(0, 0, 0, 0)
+        # kv_layout.setContentsMargins(0, 0, 0, 0)
         self.ui.kvFrame.setLayout(kv_layout)
+        
+        self.kvwidget.item_modified.connect(self.slot_kv_item_modified)
         
         ###########
 
@@ -59,6 +62,11 @@ class LabelIt( QWidget ):
         else:
             self.image_path = path
 
+        self.json_dir = self.image_path + '/jsons'
+        if not os.path.exists(self.json_dir):
+            print('create json dir', self.json_dir)
+            os.mkdir(self.json_dir)
+
         if self.image_path:
             self.images_list = glob.glob(self.image_path + '/*')
             self.images_list.sort()
@@ -71,7 +79,29 @@ class LabelIt( QWidget ):
         img_file = os.path.join(self.image_path, self.images_list[index])
         self.image_index = index
         self.image_viewer.set_photo(QPixmap(img_file))
+        
+        self.kvwidget.key_input.setText('')
+        self.kvwidget.value_input.setPlainText('')
+        
+        self.load_json()
+        
+    def load_json(self):
+        # json_file = self.images_list[self.image_index] + '.json'
+        json_file = os.path.join(self.json_dir, os.path.basename(self.images_list[self.image_index]) + '.json')
+        if os.path.exists(json_file):
+            with open(json_file) as f:
+                data = json.load(f)
+                self.kvwidget.set_pairs(data)
+                print('load json', data)
 
+    def slot_kv_item_modified(self, item):
+        # print(item)
+        if not self.ui.autoSaveChk.isChecked():
+            return
+        
+        # json_file = self.images_list[self.image_index] + '.json'
+        json_file = os.path.join(self.json_dir, os.path.basename(self.images_list[self.image_index]) + '.json')
+        json.dump(item, open(json_file, 'w'), indent=4, ensure_ascii=False)
 
 
 #######################
