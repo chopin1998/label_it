@@ -1,3 +1,4 @@
+from cProfile import label
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QListWidget, QPlainTextEdit
 from PyQt5.QtCore import pyqtSignal, Qt
@@ -47,6 +48,8 @@ class KeyValueWidget(QWidget):
 
         self.key_list.itemClicked.connect(self.slot_key_list_item_clicked)
         self.value_list.itemClicked.connect(self.slot_value_list_item_clicked)
+        self.value_list.itemDoubleClicked.connect(self.slot_value_list_item_double_clicked)
+        self.value_list.itemChanged.connect(lambda item: self.item_modified.emit(self.gen_all_pairs()))
 
     def slot_key_list_item_clicked(self, item):
         index = self.key_list.row(item)
@@ -65,6 +68,12 @@ class KeyValueWidget(QWidget):
 
         self.value_input.setPlainText(item.text())
         self.key_input.setText(self.key_list.item(index).text())
+    
+    def slot_value_list_item_double_clicked(self, item):
+        item.setFlags(item.flags() | Qt.ItemIsEditable)
+        
+        self.key_input.clear()
+        self.value_input.clear()
 
     def slot_add_pair(self):
         key = self.key_input.text()

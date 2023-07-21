@@ -99,10 +99,10 @@ class LabelIt( QWidget ):
                 
 
     def slot_kv_item_modified(self, item):
-        # print(item)
         if not self.ui.autoSaveChk.isChecked():
             return
         
+        print('auto saved')
         # json_file = self.images_list[self.image_index] + '.json'
         json_file = os.path.join(self.json_dir, os.path.basename(self.images_list[self.image_index]) + '.json')
         json.dump(item, open(json_file, 'w'), indent=4, ensure_ascii=False)
