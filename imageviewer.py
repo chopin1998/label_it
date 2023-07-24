@@ -156,10 +156,32 @@ class ImageViewer(QGraphicsView):
                     pos.setY(start_y)
 
                 self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
-
+                # print(self._draw_box.rect())
+                _rect = self._draw_box.rect()
+                if _rect.x() < 0:
+                    print('x < 0')
+                    self._draw_box.setRect(0, _rect.y(), _rect.width() + _rect.x(), _rect.height())
+                    _rect = self._draw_box.rect()
+                elif _rect.x() > self._photo.pixmap().width():
+                    print('x > w')
+                    return
+                if _rect.y() < 0:
+                    print('y < 0')
+                    self._draw_box.setRect(_rect.x(), 0, _rect.width(), _rect.height() + _rect.y())
+                    _rect = self._draw_box.rect()
+                elif _rect.y() > self._photo.pixmap().height():
+                    self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), _rect.height() + _rect.y())
+                    _rect = self._draw_box.rect()
+                if _rect.x() + _rect.width() > self._photo.pixmap().width():
+                    print('x + w > w')
+                    self._draw_box.setRect(_rect.x(), _rect.y(), self._photo.pixmap().width() - _rect.x(), _rect.height())
+                    _rect = self._draw_box.rect()
+                if _rect.y() + _rect.height() > self._photo.pixmap().height():
+                    print('y + h > h')
+                    self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), self._photo.pixmap().height() - _rect.y())
+                    _rect = self._draw_box.rect()
 
                 self._start_point = None
-
                 _rect = self._draw_box.rect()
 
                 # cv2.imshow('img', self.cv2_img)
@@ -172,53 +194,56 @@ class ImageViewer(QGraphicsView):
             super().mouseReleaseEvent(event)
 
 
-class Window(QWidget):
-
-    def __init__(self):
-        super(Window, self).__init__()
-        self.viewer = ImageViewer(self)
-
-        # self.viewer.photoClicked.connect(lambda pos: print("Clicked:", pos))
-        self.viewer.photoCropped.connect(self.slot_show_cropped)
-
-        # 'Load image' button
-        self.btn_load = QToolButton(self)
-        self.btn_load.setText('Load image')
-        self.btn_load.clicked.connect(self.load_image)
-
-        self.draw_toggle = QToolButton(self)
-        self.draw_toggle.setText('Draw')
-        self.draw_toggle.clicked.connect(self.slot_draw_toggle)
-
-        # Arrange layout
-        vblayout = QVBoxLayout(self)
-        vblayout.addWidget(self.viewer)
-        hblayout = QHBoxLayout()
-        hblayout.setAlignment(QtCore.Qt.AlignLeft)
-        hblayout.addWidget(self.btn_load)
-        hblayout.addWidget(self.draw_toggle)
-        vblayout.addLayout(hblayout)
-
-    def load_image(self):
-        img = QFileDialog.getOpenFileName(self, 'Open image')[0]
-        self.viewer.set_photo(QtGui.QPixmap(img))
-
-    def slot_draw_toggle(self):
-        if self.viewer._under_draw:
-            self.draw_toggle.setText('Draw')
-            self.viewer.leave_draw_box()
-        else:
-            self.draw_toggle.setText('Stop')
-            self.viewer.enter_draw_box()
-
-    def slot_show_cropped(self, cropped):
-        cv2.imshow('cropped here', cropped)
-        cv2.waitKey(1)
-
 
 
 if __name__ == '__main__':
+
+    class Window(QWidget):
+
+        def __init__(self):
+            super(Window, self).__init__()
+            self.viewer = ImageViewer(self)
+
+            # self.viewer.photoClicked.connect(lambda pos: print("Clicked:", pos))
+            self.viewer.photoCropped.connect(self.slot_show_cropped)
+
+            # 'Load image' button
+            self.btn_load = QToolButton(self)
+            self.btn_load.setText('Load image')
+            self.btn_load.clicked.connect(self.load_image)
+
+            self.draw_toggle = QToolButton(self)
+            self.draw_toggle.setText('Draw')
+            self.draw_toggle.clicked.connect(self.slot_draw_toggle)
+
+            # Arrange layout
+            vblayout = QVBoxLayout(self)
+            vblayout.addWidget(self.viewer)
+            hblayout = QHBoxLayout()
+            hblayout.setAlignment(QtCore.Qt.AlignLeft)
+            hblayout.addWidget(self.btn_load)
+            hblayout.addWidget(self.draw_toggle)
+            vblayout.addLayout(hblayout)
+
+        def load_image(self):
+            img = QFileDialog.getOpenFileName(self, 'Open image')[0]
+            self.viewer.set_photo(QtGui.QPixmap(img))
+
+        def slot_draw_toggle(self):
+            if self.viewer._under_draw:
+                self.draw_toggle.setText('Draw')
+                self.viewer.leave_draw_box()
+            else:
+                self.draw_toggle.setText('Stop')
+                self.viewer.enter_draw_box()
+
+        def slot_show_cropped(self, cropped):
+            cv2.imshow('cropped here', cropped)
+            cv2.waitKey(1)
+
     import sys
+    from paddleocr import PaddleOCR
+
     app = QApplication(sys.argv)
     window = Window()
     window.setGeometry(500, 300, 800, 600)
