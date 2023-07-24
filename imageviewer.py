@@ -1,15 +1,22 @@
+from turtle import window_width
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame, QToolButton, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget, QApplication, QFileDialog
 from PyQt5.QtGui import QColor, QBrush, QPixmap
 from PyQt5.QtCore import pyqtSignal, Qt, QPoint, QRectF
 
-
+import cv2
+import numpy as np
 
 class ImageViewer(QGraphicsView):
     photoClicked = pyqtSignal(QPoint)
+    photoCropped = pyqtSignal(np.ndarray)
 
     def __init__(self, parent=None):
-        super(ImageViewer, self).__init__(parent)
+        super().__init__(parent)
+
+        self._under_draw = False
+        self._draw_box = None
+
         self._zoom = 0
         self._empty = True
         self._scene = QGraphicsScene(self)
@@ -17,10 +24,13 @@ class ImageViewer(QGraphicsView):
         self.scale_level = 1.0
         self._scene.addItem(self._photo)
         self.setScene(self._scene)
+
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.setBackgroundBrush(QBrush(QColor(100, 100, 100)))
         self.setFrameShape(QFrame.Shape.NoFrame)
 
@@ -45,11 +55,20 @@ class ImageViewer(QGraphicsView):
         self._zoom = 0
         if pixmap and not pixmap.isNull():
             self._empty = False
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
             self._photo.setPixmap(pixmap)
+
+            _qimg = self._photo.pixmap().toImage()
+            _shape = _qimg.height(), _qimg.width()
+            _shape += (4,)
+            _ptr = _qimg.bits()
+            _ptr.setsize(_qimg.byteCount())
+            # print(_ptr.getsize())
+
+            self.cv2_img = np.array(_ptr, dtype=np.uint8).reshape(_shape)
         else:
             self._empty = True
-            self.setDragMode(QGraphicsView.NoDrag)
+            self.setDragMode(QGraphicsView.DragMode.NoDrag)
             self._photo.setPixmap(QPixmap())
 
         self.fit_in_view()
@@ -59,37 +78,81 @@ class ImageViewer(QGraphicsView):
             return
 
         if event.angleDelta().y() > 0:
-            factor = 1.25
+            factor = 1.1
             self._zoom += 1
         else:
-            factor = 0.8
+            factor = 0.9
             self._zoom -= 1
 
         if self._zoom > 0:
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
             tf = self.transform()
             current_scale = min(tf.m11(), tf.m22())
-            if current_scale > 2 and factor > 1:
+            if current_scale > 1.5 and factor > 1:
                 # print('zoom limited')
                 # self.parent().parent().setWindowTitle('zoom limited')
                 self._zoom -= 1
             else:
                 self.scale(factor, factor)
         elif self._zoom == 0:
+            self.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.fit_in_view()
         else:
             self._zoom = 0
 
-    def mouseMoveEvent(self, event):
-        # print('mouseMoveEvent', event.pos().x(), event.pos().y())
-        
-        super(ImageViewer, self).mouseMoveEvent(event)
+    def enter_draw_box(self):
+        self._under_draw = True
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
+
+    def leave_draw_box(self):
+        self._under_draw = False
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+
+    def clear_draw_box(self):
+        if not self._under_draw:
+            if self._draw_box is not None:
+                self._scene.removeItem(self._draw_box)
+                self._draw_box = None
 
     def mousePressEvent(self, event):
+        super().mousePressEvent(event)
         if self._photo.isUnderMouse():
             self.photoClicked.emit(self.mapToScene(event.pos()).toPoint())
-        super(ImageViewer, self).mousePressEvent(event)
 
+        if self._under_draw:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._start_point = self.mapToScene(event.pos())
+                if self._draw_box is not None:
+                    self._draw_box.setRect(self._start_point.x(), self._start_point.y(), 0, 0)
+                else:
+                    self._draw_box = self._scene.addRect(self._start_point.x(), self._start_point.y(), 0, 0, pen=QtGui.QPen(Qt.red, 2, Qt.SolidLine))
 
+    def mouseMoveEvent(self, event):
+
+        if self._under_draw:
+            if event.buttons() == Qt.MouseButton.LeftButton:
+                pos = self.mapToScene(event.pos())
+                self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._under_draw:
+            if event.button() == Qt.MouseButton.LeftButton:
+                pos = self.mapToScene(event.pos())
+                self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
+                self._start_point = None
+
+                _rect = self._draw_box.rect()
+
+                # cv2.imshow('img', self.cv2_img)
+                cropped = self.cv2_img[int(_rect.y()):int(_rect.y() + _rect.height()), int(_rect.x()):int(_rect.x() + _rect.width())]
+                # cv2.imshow('cropped', cropped)
+                # cv2.waitKey(1)
+                self.photoCropped.emit(cropped)
+
+        else:
+            super().mouseReleaseEvent(event)
 
 
 class Window(QWidget):
@@ -97,22 +160,44 @@ class Window(QWidget):
     def __init__(self):
         super(Window, self).__init__()
         self.viewer = ImageViewer(self)
+        
+        # self.viewer.photoClicked.connect(lambda pos: print("Clicked:", pos))
+        self.viewer.photoCropped.connect(self.slot_show_cropped)
+        
         # 'Load image' button
         self.btn_load = QToolButton(self)
         self.btn_load.setText('Load image')
         self.btn_load.clicked.connect(self.load_image)
-        
+
+        self.draw_toggle = QToolButton(self)
+        self.draw_toggle.setText('Draw')
+        self.draw_toggle.clicked.connect(self.slot_draw_toggle)
+
         # Arrange layout
         vblayout = QVBoxLayout(self)
         vblayout.addWidget(self.viewer)
         hblayout = QHBoxLayout()
         hblayout.setAlignment(QtCore.Qt.AlignLeft)
         hblayout.addWidget(self.btn_load)
+        hblayout.addWidget(self.draw_toggle)
         vblayout.addLayout(hblayout)
 
     def load_image(self):
         img = QFileDialog.getOpenFileName(self, 'Open image')[0]
         self.viewer.set_photo(QtGui.QPixmap(img))
+
+    def slot_draw_toggle(self):
+        if self.viewer._under_draw:
+            self.draw_toggle.setText('Draw')
+            self.viewer.leave_draw_box()
+        else:
+            self.draw_toggle.setText('Stop')
+            self.viewer.enter_draw_box()
+            
+    def slot_show_cropped(self, cropped):
+        cv2.imshow('cropped here', cropped)
+        cv2.waitKey(1)
+
 
 
 if __name__ == '__main__':
@@ -120,5 +205,7 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = Window()
     window.setGeometry(500, 300, 800, 600)
+    _timer = QtCore.QTimer()
+    _timer.singleShot(100, lambda: window.viewer.set_photo(QtGui.QPixmap('/home/marco/arts/eso1242a.jpg')))
     window.show()
     sys.exit(app.exec_())
