@@ -132,6 +132,7 @@ class ImageViewer(QGraphicsView):
         if self._under_draw:
             if event.buttons() == Qt.MouseButton.LeftButton:
                 pos = self.mapToScene(event.pos())
+
                 self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
         else:
             super().mouseMoveEvent(event)
@@ -140,7 +141,23 @@ class ImageViewer(QGraphicsView):
         if self._under_draw:
             if event.button() == Qt.MouseButton.LeftButton:
                 pos = self.mapToScene(event.pos())
+
+                if pos.x() < self._start_point.x() and pos.y() < self._start_point.y():
+                    start_x, start_y = self._start_point.x(), self._start_point.y()
+                    self._start_point = pos
+                    pos = QtCore.QPointF(start_x, start_y)
+                elif pos.x() < self._start_point.x():
+                    start_x = self._start_point.x()
+                    self._start_point.setX(pos.x())
+                    pos.setX(start_x)
+                elif pos.y() < self._start_point.y():
+                    start_y = self._start_point.y()
+                    self._start_point.setY(pos.y())
+                    pos.setY(start_y)
+
                 self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
+
+
                 self._start_point = None
 
                 _rect = self._draw_box.rect()
@@ -160,10 +177,10 @@ class Window(QWidget):
     def __init__(self):
         super(Window, self).__init__()
         self.viewer = ImageViewer(self)
-        
+
         # self.viewer.photoClicked.connect(lambda pos: print("Clicked:", pos))
         self.viewer.photoCropped.connect(self.slot_show_cropped)
-        
+
         # 'Load image' button
         self.btn_load = QToolButton(self)
         self.btn_load.setText('Load image')
@@ -193,7 +210,7 @@ class Window(QWidget):
         else:
             self.draw_toggle.setText('Stop')
             self.viewer.enter_draw_box()
-            
+
     def slot_show_cropped(self, cropped):
         cv2.imshow('cropped here', cropped)
         cv2.waitKey(1)
