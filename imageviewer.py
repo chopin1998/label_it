@@ -73,8 +73,25 @@ class ImageViewer(QGraphicsView):
 
         self.fit_in_view()
 
+    def enter_draw_box(self):
+        self._under_draw = True
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
+
+    def leave_draw_box(self):
+        self._under_draw = False
+        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+
+    def clear_draw_box(self):
+        if not self._under_draw:
+            if self._draw_box is not None:
+                self._scene.removeItem(self._draw_box)
+                self._draw_box = None
+
     def wheelEvent(self, event):
         if not self.has_photo():
+            return
+
+        if self._under_draw:
             return
 
         if event.angleDelta().y() > 0:
@@ -100,19 +117,12 @@ class ImageViewer(QGraphicsView):
         else:
             self._zoom = 0
 
-    def enter_draw_box(self):
-        self._under_draw = True
-        self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-    def leave_draw_box(self):
-        self._under_draw = False
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-
-    def clear_draw_box(self):
-        if not self._under_draw:
-            if self._draw_box is not None:
-                self._scene.removeItem(self._draw_box)
-                self._draw_box = None
+    # def keyPressEvent(self, event):
+    #     super().keyPressEvent(event)
+    #     print(event.key())
+    #     if self._under_draw:
+    #         if event.key() == Qt.Key.Key_Escape:
+    #             self.leave_draw_box()
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -128,7 +138,6 @@ class ImageViewer(QGraphicsView):
                     self._draw_box = self._scene.addRect(self._start_point.x(), self._start_point.y(), 0, 0, pen=QtGui.QPen(Qt.red, 2, Qt.SolidLine))
 
     def mouseMoveEvent(self, event):
-
         if self._under_draw:
             if event.buttons() == Qt.MouseButton.LeftButton:
                 pos = self.mapToScene(event.pos())
@@ -240,6 +249,13 @@ if __name__ == '__main__':
         def slot_show_cropped(self, cropped):
             cv2.imshow('cropped here', cropped)
             cv2.waitKey(1)
+        
+        def keyPressEvent(self, e):
+            super().keyPressEvent(e)
+            
+            if self.viewer._under_draw:
+                if e.key() == Qt.Key.Key_Escape:
+                    self.slot_draw_toggle()
 
     import sys
     from paddleocr import PaddleOCR
