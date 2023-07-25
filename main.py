@@ -5,7 +5,7 @@ import sys
 import glob
 import json
 
-from PyQt5 import uic
+from PyQt5 import QtGui, uic
 from PyQt5.QtWidgets import QWidget, QApplication, QWidget, QFileDialog, QVBoxLayout
 from PyQt5.QtGui import QColor, QPixmap
 from PyQt5.QtCore import QTimer, Qt
@@ -44,6 +44,8 @@ class LabelIt( QWidget ):
         self.ui.loadBtn.clicked.connect(self.choose_dir)
         self.ui.prevBtn.clicked.connect(lambda: self.show_image(self.image_index - 1))
         self.ui.nextBtn.clicked.connect(lambda: self.show_image(self.image_index + 1))
+        self.ui.prevBtn.clicked.connect(lambda: self.image_viewer.clear_draw_box())
+        self.ui.nextBtn.clicked.connect(lambda: self.image_viewer.clear_draw_box())
         self.ui.grabBtn.clicked.connect(self.slot_grab_toggle)
         
         self.kvwidget = KeyValueWidget()
@@ -112,6 +114,14 @@ class LabelIt( QWidget ):
         json_file = os.path.join(self.json_dir, os.path.basename(self.images_list[self.image_index]) + '.json')
         json.dump(item, open(json_file, 'w'), indent=4, ensure_ascii=False)
 
+    def keyPressEvent(self, e):
+        super().keyPressEvent(e)
+        
+        if e.key() == Qt.Key.Key_Escape:
+            if self.image_viewer._under_draw:
+                self.image_viewer.leave_draw_box()
+                self.ui.grabBtn.setText('Grab')
+
     def slot_grab_toggle(self):
         
         if self.image_viewer._under_draw:
@@ -159,6 +169,7 @@ class LabelIt( QWidget ):
         # copy value to curr kv focused item
         self.kvwidget.value_list.currentItem().setText('\n'.join(rev))
         self.kvwidget.value_list.setCurrentRow(self.kvwidget.value_list.currentRow() + 1)
+        self.kvwidget.key_list.setCurrentRow(self.kvwidget.key_list.currentRow() + 1)
             
         # print(result)
         # self.slot_kv_item_modified(self.kvwidget.get_pairs())

@@ -81,6 +81,8 @@ class ImageViewer(QGraphicsView):
     def leave_draw_box(self):
         self._under_draw = False
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        
+        self.clear_draw_box()
 
     def set_drawbox_color(self, color, width=2, style=Qt.PenStyle.SolidLine):
         self._draw_box.setPen(
@@ -91,6 +93,9 @@ class ImageViewer(QGraphicsView):
             if self._draw_box is not None:
                 self._scene.removeItem(self._draw_box)
                 self._draw_box = None
+            if self._draw_box_label is not None:
+                self._scene.removeItem(self._draw_box_label)
+                self._draw_box_label = None
 
     def add_text_in_draw_box(self, text):
         if self._draw_box is not None:

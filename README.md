@@ -6,6 +6,4 @@ It suitable for creating datasets of Donut/LayoutLMv3(or other e2e models).
 
 ![image](doc/screenshot.jpg)
 
-## TODO
-
-add OCR functions
+![video](doc/screenshot.gif)
