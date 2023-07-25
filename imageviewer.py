@@ -1,4 +1,4 @@
-from turtle import window_width
+from turtle import position, window_width
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame, QToolButton, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget, QApplication, QFileDialog
 from PyQt5.QtGui import QColor, QBrush, QPixmap
@@ -8,14 +8,15 @@ import cv2
 import numpy as np
 
 class ImageViewer(QGraphicsView):
-    photoClicked = pyqtSignal(QPoint)
-    photoCropped = pyqtSignal(np.ndarray)
+    imageClicked = pyqtSignal(QPoint)
+    imageCropped = pyqtSignal(np.ndarray)
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self._under_draw = False
         self._draw_box = None
+        self._draw_box_label = None
 
         self._zoom = 0
         self._empty = True
@@ -81,11 +82,23 @@ class ImageViewer(QGraphicsView):
         self._under_draw = False
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
+    def set_drawbox_color(self, color, width=2, style=Qt.PenStyle.SolidLine):
+        self._draw_box.setPen(
+            QtGui.QPen(color, width, Qt.PenStyle.SolidLine))
+
     def clear_draw_box(self):
         if not self._under_draw:
             if self._draw_box is not None:
                 self._scene.removeItem(self._draw_box)
                 self._draw_box = None
+
+    def add_text_in_draw_box(self, text):
+        if self._draw_box is not None:
+            if self._draw_box_label is None:
+                self._draw_box_label = self._scene.addText(text, font=QtGui.QFont('Noto', 16))
+            else:
+                self._draw_box_label.setPlainText(text)
+            self._draw_box_label.setPos(self._draw_box.rect().x(), self._draw_box.rect().y())
 
     def wheelEvent(self, event):
         if not self.has_photo():
@@ -127,15 +140,18 @@ class ImageViewer(QGraphicsView):
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
         if self._photo.isUnderMouse():
-            self.photoClicked.emit(self.mapToScene(event.pos()).toPoint())
+            self.imageClicked.emit(self.mapToScene(event.pos()).toPoint())
 
         if self._under_draw:
             if event.button() == Qt.MouseButton.LeftButton:
                 self._start_point = self.mapToScene(event.pos())
+                
+                _pen = QtGui.QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DashDotDotLine)
                 if self._draw_box is not None:
+                    self.set_drawbox_color(Qt.GlobalColor.red, 2, Qt.PenStyle.DashDotDotLine)
                     self._draw_box.setRect(self._start_point.x(), self._start_point.y(), 0, 0)
                 else:
-                    self._draw_box = self._scene.addRect(self._start_point.x(), self._start_point.y(), 0, 0, pen=QtGui.QPen(Qt.red, 2, Qt.SolidLine))
+                    self._draw_box = self._scene.addRect(self._start_point.x(), self._start_point.y(), 0, 0, pen=_pen)
 
     def mouseMoveEvent(self, event):
         if self._under_draw:
@@ -197,7 +213,7 @@ class ImageViewer(QGraphicsView):
                 cropped = self.cv2_img[int(_rect.y()):int(_rect.y() + _rect.height()), int(_rect.x()):int(_rect.x() + _rect.width())]
                 # cv2.imshow('cropped', cropped)
                 # cv2.waitKey(1)
-                self.photoCropped.emit(cropped)
+                self.imageCropped.emit(cropped)
 
         else:
             super().mouseReleaseEvent(event)
@@ -214,7 +230,7 @@ if __name__ == '__main__':
             self.viewer = ImageViewer(self)
 
             # self.viewer.photoClicked.connect(lambda pos: print("Clicked:", pos))
-            self.viewer.photoCropped.connect(self.slot_show_cropped)
+            self.viewer.imageCropped.connect(self.slot_show_cropped)
 
             # 'Load image' button
             self.btn_load = QToolButton(self)
@@ -249,10 +265,10 @@ if __name__ == '__main__':
         def slot_show_cropped(self, cropped):
             cv2.imshow('cropped here', cropped)
             cv2.waitKey(1)
-        
+
         def keyPressEvent(self, e):
             super().keyPressEvent(e)
-            
+
             if self.viewer._under_draw:
                 if e.key() == Qt.Key.Key_Escape:
                     self.slot_draw_toggle()

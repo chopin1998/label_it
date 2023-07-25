@@ -6,15 +6,15 @@ import glob
 import json
 
 from PyQt5 import uic
-from PyQt5.QtWidgets import QWidget, QApplication, QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame, QVBoxLayout
-from PyQt5.QtGui import QColor,  QBrush, QPixmap
-from PyQt5.QtCore import pyqtSignal, Qt, QPoint, QRectF, QTimer
+from PyQt5.QtWidgets import QWidget, QApplication, QWidget, QFileDialog, QVBoxLayout
+from PyQt5.QtGui import QColor, QPixmap
+from PyQt5.QtCore import QTimer, Qt
 
 from imageviewer import ImageViewer
 from kvwidget import KeyValueWidget
 
 from paddleocr import PaddleOCR
-
+import cv2
 
 class LabelIt( QWidget ):
 
@@ -22,6 +22,9 @@ class LabelIt( QWidget ):
 
     def __init__( self ):
         super().__init__()
+        
+        self.ocr = PaddleOCR(use_angle_cls=True, show_log=False)
+        # self.ocr.use_gpu = False
 
         # init vars
         self.image_path = ''
@@ -36,10 +39,12 @@ class LabelIt( QWidget ):
         viewer_layout = QVBoxLayout(self.ui.pictureFrame)       
         viewer_layout.addWidget(self.image_viewer)
         self.ui.pictureFrame.setLayout(viewer_layout)
+        self.image_viewer.imageCropped.connect(self.slot_image_cropped)
         
         self.ui.loadBtn.clicked.connect(self.choose_dir)
         self.ui.prevBtn.clicked.connect(lambda: self.show_image(self.image_index - 1))
         self.ui.nextBtn.clicked.connect(lambda: self.show_image(self.image_index + 1))
+        self.ui.grabBtn.clicked.connect(self.slot_grab_toggle)
         
         self.kvwidget = KeyValueWidget()
         kv_layout = QVBoxLayout(self.ui.kvFrame)
@@ -107,6 +112,61 @@ class LabelIt( QWidget ):
         json_file = os.path.join(self.json_dir, os.path.basename(self.images_list[self.image_index]) + '.json')
         json.dump(item, open(json_file, 'w'), indent=4, ensure_ascii=False)
 
+    def slot_grab_toggle(self):
+        
+        if self.image_viewer._under_draw:
+            self.image_viewer.leave_draw_box()
+            self.ui.grabBtn.setText('Grab')
+        else:
+            self.image_viewer.enter_draw_box()
+            self.ui.grabBtn.setText('StopGrab')
+    
+    def slot_image_cropped(self, img):
+        
+        # convert RGBA to RGB
+        img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+        
+        # cv2.imshow('slot_image_cropped', img)
+        # print('slot_image_cropped', img)
+        result = self.ocr.ocr(img)[0]
+        print('result -->', result)
+        
+        if len(result) == 0:
+            return
+    
+        confidence_sum = 0
+        rev = []
+        
+        for line in result:
+            if line:
+                rev.append(line[1][0])
+                confidence_sum += line[1][1]
+                
+        confidence_avg = confidence_sum / len(result)
+        print('-->', rev, confidence_avg)
+        if confidence_avg > 0.85:
+            _color = Qt.GlobalColor.darkGreen
+            _width = 10
+        elif confidence_sum > 0.6:
+            _color = Qt.GlobalColor.yellow
+            _width = 5
+        self.image_viewer.set_drawbox_color(Qt.GlobalColor.darkGreen, width=10)
+        self.image_viewer.add_text_in_draw_box('\n'.join(rev))
+        
+        # copy to clipboard
+        # QApplication.clipboard().setText('\n'.join(rev))
+        
+        # copy value to curr kv focused item
+        self.kvwidget.value_list.currentItem().setText('\n'.join(rev))
+        self.kvwidget.value_list.setCurrentRow(self.kvwidget.value_list.currentRow() + 1)
+            
+        # print(result)
+        # self.slot_kv_item_modified(self.kvwidget.get_pairs())
+        # self.ui.grabBtn.setText('Grab')
+        # self.image_viewer.leave_draw_box()
+        # self.show_image(self.image_index + 1)
+    
+    
 
 #######################
 if __name__ == '__main__':
