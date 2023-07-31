@@ -139,6 +139,9 @@ background-color: rgb(192, 200, 192);</string>
     </item>
     <item>
      <widget class="QPushButton" name="grabBtn">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="maximumSize">
        <size>
         <width>100</width>
@@ -149,7 +152,7 @@ background-color: rgb(192, 200, 192);</string>
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Grab</string>
+       <string>grab</string>
       </property>
       <property name="autoRepeat">
        <bool>false</bool>

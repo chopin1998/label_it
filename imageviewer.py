@@ -14,7 +14,6 @@ class ImageViewer(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._under_draw = False
         self._draw_box = None
         self._draw_box_label = None
 
@@ -74,28 +73,17 @@ class ImageViewer(QGraphicsView):
 
         self.fit_in_view()
 
-    def enter_draw_box(self):
-        self._under_draw = True
-        self.setDragMode(QGraphicsView.DragMode.NoDrag)
-
-    def leave_draw_box(self):
-        self._under_draw = False
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        
-        self.clear_draw_box()
-
     def set_drawbox_color(self, color, width=2, style=Qt.PenStyle.SolidLine):
         self._draw_box.setPen(
             QtGui.QPen(color, width, Qt.PenStyle.SolidLine))
 
     def clear_draw_box(self):
-        if not self._under_draw:
-            if self._draw_box is not None:
-                self._scene.removeItem(self._draw_box)
-                self._draw_box = None
-            if self._draw_box_label is not None:
-                self._scene.removeItem(self._draw_box_label)
-                self._draw_box_label = None
+        if self._draw_box is not None:
+            self._scene.removeItem(self._draw_box)
+            self._draw_box = None
+        if self._draw_box_label is not None:
+            self._scene.removeItem(self._draw_box_label)
+            self._draw_box_label = None
 
     def add_text_in_draw_box(self, text):
         if self._draw_box is not None:
@@ -107,9 +95,6 @@ class ImageViewer(QGraphicsView):
 
     def wheelEvent(self, event):
         if not self.has_photo():
-            return
-
-        if self._under_draw:
             return
 
         if event.angleDelta().y() > 0:
@@ -135,93 +120,100 @@ class ImageViewer(QGraphicsView):
         else:
             self._zoom = 0
 
-    # def keyPressEvent(self, event):
-    #     super().keyPressEvent(event)
-    #     print(event.key())
-    #     if self._under_draw:
-    #         if event.key() == Qt.Key.Key_Escape:
-    #             self.leave_draw_box()
+    def mouseMoveEvent(self, event):
+
+        ebtn = event.buttons()
+        if ebtn == Qt.MouseButton.LeftButton:
+            super().mouseMoveEvent(event)
+
+        elif ebtn == Qt.MouseButton.RightButton:
+            pos = self.mapToScene(event.pos())
+            self._draw_box.setRect(self._start_point.x(),
+                                   self._start_point.y(),
+                                   pos.x() - self._start_point.x(),
+                                   pos.y() - self._start_point.y())
+
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
+
         if self._photo.isUnderMouse():
             self.imageClicked.emit(self.mapToScene(event.pos()).toPoint())
 
-        if self._under_draw:
-            if event.button() == Qt.MouseButton.LeftButton:
-                self._start_point = self.mapToScene(event.pos())
-                
-                _pen = QtGui.QPen(Qt.GlobalColor.red, 2, Qt.PenStyle.DashDotDotLine)
-                if self._draw_box is not None:
-                    self.set_drawbox_color(Qt.GlobalColor.red, 2, Qt.PenStyle.DashDotDotLine)
-                    self._draw_box.setRect(self._start_point.x(), self._start_point.y(), 0, 0)
-                else:
-                    self._draw_box = self._scene.addRect(self._start_point.x(), self._start_point.y(), 0, 0, pen=_pen)
+        ebtn = event.button()
+        if ebtn == Qt.MouseButton.LeftButton:
+            return
+        elif ebtn == Qt.MouseButton.RightButton:
+            self._start_point = self.mapToScene(event.pos())
 
-    def mouseMoveEvent(self, event):
-        if self._under_draw:
-            if event.buttons() == Qt.MouseButton.LeftButton:
-                pos = self.mapToScene(event.pos())
-
-                self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
-        else:
-            super().mouseMoveEvent(event)
+            _pen = QtGui.QPen(Qt.GlobalColor.red, 2,
+                                Qt.PenStyle.DashDotDotLine)
+            if self._draw_box is not None:
+                self.set_drawbox_color(Qt.GlobalColor.red, 2,
+                                        Qt.PenStyle.DashDotDotLine)
+                self._draw_box.setRect(self._start_point.x(),
+                                        self._start_point.y(), 0, 0)
+            else:
+                self._draw_box = self._scene.addRect(self._start_point.x(),
+                                                        self._start_point.y(),
+                                                        0,
+                                                        0,
+                                                        pen=_pen)
 
     def mouseReleaseEvent(self, event):
-        if self._under_draw:
-            if event.button() == Qt.MouseButton.LeftButton:
-                pos = self.mapToScene(event.pos())
+        ebtn = event.button()
 
-                if pos.x() < self._start_point.x() and pos.y() < self._start_point.y():
-                    start_x, start_y = self._start_point.x(), self._start_point.y()
-                    self._start_point = pos
-                    pos = QtCore.QPointF(start_x, start_y)
-                elif pos.x() < self._start_point.x():
-                    start_x = self._start_point.x()
-                    self._start_point.setX(pos.x())
-                    pos.setX(start_x)
-                elif pos.y() < self._start_point.y():
-                    start_y = self._start_point.y()
-                    self._start_point.setY(pos.y())
-                    pos.setY(start_y)
-
-                self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
-                # print(self._draw_box.rect())
-                _rect = self._draw_box.rect()
-                if _rect.x() < 0:
-                    print('x < 0')
-                    self._draw_box.setRect(0, _rect.y(), _rect.width() + _rect.x(), _rect.height())
-                    _rect = self._draw_box.rect()
-                elif _rect.x() > self._photo.pixmap().width():
-                    print('x > w')
-                    return
-                if _rect.y() < 0:
-                    print('y < 0')
-                    self._draw_box.setRect(_rect.x(), 0, _rect.width(), _rect.height() + _rect.y())
-                    _rect = self._draw_box.rect()
-                elif _rect.y() > self._photo.pixmap().height():
-                    self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), _rect.height() + _rect.y())
-                    _rect = self._draw_box.rect()
-                if _rect.x() + _rect.width() > self._photo.pixmap().width():
-                    print('x + w > w')
-                    self._draw_box.setRect(_rect.x(), _rect.y(), self._photo.pixmap().width() - _rect.x(), _rect.height())
-                    _rect = self._draw_box.rect()
-                if _rect.y() + _rect.height() > self._photo.pixmap().height():
-                    print('y + h > h')
-                    self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), self._photo.pixmap().height() - _rect.y())
-                    _rect = self._draw_box.rect()
-
-                self._start_point = None
-                _rect = self._draw_box.rect()
-
-                # cv2.imshow('img', self.cv2_img)
-                cropped = self.cv2_img[int(_rect.y()):int(_rect.y() + _rect.height()), int(_rect.x()):int(_rect.x() + _rect.width())]
-                # cv2.imshow('cropped', cropped)
-                # cv2.waitKey(1)
-                self.imageCropped.emit(cropped)
-
-        else:
+        if ebtn == Qt.MouseButton.LeftButton:
             super().mouseReleaseEvent(event)
+
+        elif ebtn == Qt.MouseButton.RightButton:
+            pos = self.mapToScene(event.pos())
+
+            if pos.x() < self._start_point.x() and pos.y() < self._start_point.y():
+                start_x, start_y = self._start_point.x(), self._start_point.y()
+                self._start_point = pos
+                pos = QtCore.QPointF(start_x, start_y)
+            elif pos.x() < self._start_point.x():
+                start_x = self._start_point.x()
+                self._start_point.setX(pos.x())
+                pos.setX(start_x)
+            elif pos.y() < self._start_point.y():
+                start_y = self._start_point.y()
+                self._start_point.setY(pos.y())
+                pos.setY(start_y)
+
+            self._draw_box.setRect(self._start_point.x(), self._start_point.y(), pos.x() - self._start_point.x(), pos.y() - self._start_point.y())
+            # print(self._draw_box.rect())
+            _rect = self._draw_box.rect()
+            if _rect.x() < 0:
+                print('x < 0')
+                self._draw_box.setRect(0, _rect.y(), _rect.width() + _rect.x(), _rect.height())
+                _rect = self._draw_box.rect()
+            elif _rect.x() > self._photo.pixmap().width():
+                print('x > w')
+                return
+            if _rect.y() < 0:
+                print('y < 0')
+                self._draw_box.setRect(_rect.x(), 0, _rect.width(), _rect.height() + _rect.y())
+                _rect = self._draw_box.rect()
+            elif _rect.y() > self._photo.pixmap().height():
+                self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), _rect.height() + _rect.y())
+                _rect = self._draw_box.rect()
+            if _rect.x() + _rect.width() > self._photo.pixmap().width():
+                print('x + w > w')
+                self._draw_box.setRect(_rect.x(), _rect.y(), self._photo.pixmap().width() - _rect.x(), _rect.height())
+                _rect = self._draw_box.rect()
+            if _rect.y() + _rect.height() > self._photo.pixmap().height():
+                print('y + h > h')
+                self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), self._photo.pixmap().height() - _rect.y())
+                _rect = self._draw_box.rect()
+
+            self._start_point = None
+            _rect = self._draw_box.rect()
+
+            cropped = self.cv2_img[int(_rect.y()):int(_rect.y() + _rect.height()), int(_rect.x()):int(_rect.x() + _rect.width())]
+            self.imageCropped.emit(cropped)
+
 
 
 
@@ -242,9 +234,9 @@ if __name__ == '__main__':
             self.btn_load.setText('Load image')
             self.btn_load.clicked.connect(self.load_image)
 
-            self.draw_toggle = QToolButton(self)
-            self.draw_toggle.setText('Draw')
-            self.draw_toggle.clicked.connect(self.slot_draw_toggle)
+            # self.draw_toggle = QToolButton(self)
+            # self.draw_toggle.setText('Draw')
+            # self.draw_toggle.clicked.connect(self.slot_draw_toggle)
 
             # Arrange layout
             vblayout = QVBoxLayout(self)
@@ -252,20 +244,20 @@ if __name__ == '__main__':
             hblayout = QHBoxLayout()
             hblayout.setAlignment(QtCore.Qt.AlignLeft)
             hblayout.addWidget(self.btn_load)
-            hblayout.addWidget(self.draw_toggle)
+            # hblayout.addWidget(self.draw_toggle)
             vblayout.addLayout(hblayout)
 
         def load_image(self):
             img = QFileDialog.getOpenFileName(self, 'Open image')[0]
             self.viewer.set_photo(QtGui.QPixmap(img))
 
-        def slot_draw_toggle(self):
-            if self.viewer._under_draw:
-                self.draw_toggle.setText('Draw')
-                self.viewer.leave_draw_box()
-            else:
-                self.draw_toggle.setText('Stop')
-                self.viewer.enter_draw_box()
+        # def slot_draw_toggle(self):
+        #     if self.viewer._under_draw:
+        #         self.draw_toggle.setText('Draw')
+        #         self.viewer.leave_draw_box()
+        #     else:
+        #         self.draw_toggle.setText('Stop')
+        #         self.viewer.enter_draw_box()
 
         def slot_show_cropped(self, cropped):
             cv2.imshow('cropped here', cropped)
@@ -274,9 +266,8 @@ if __name__ == '__main__':
         def keyPressEvent(self, e):
             super().keyPressEvent(e)
 
-            if self.viewer._under_draw:
-                if e.key() == Qt.Key.Key_Escape:
-                    self.slot_draw_toggle()
+            if e.key() == Qt.Key.Key_Escape:
+                self.viewer.clear_draw_box()
 
     import sys
     from paddleocr import PaddleOCR
