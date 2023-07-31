@@ -168,8 +168,8 @@ class LabelIt( QWidget ):
         
         # copy value to curr kv focused item
         self.kvwidget.value_list.currentItem().setText('\n'.join(rev))
-        self.kvwidget.value_list.setCurrentRow(self.kvwidget.value_list.currentRow() + 1)
-        self.kvwidget.key_list.setCurrentRow(self.kvwidget.key_list.currentRow() + 1)
+        # self.kvwidget.value_list.setCurrentRow(self.kvwidget.value_list.currentRow() + 1)
+        # self.kvwidget.key_list.setCurrentRow(self.kvwidget.key_list.currentRow() + 1)
             
         # print(result)
         # self.slot_kv_item_modified(self.kvwidget.get_pairs())

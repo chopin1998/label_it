@@ -18,6 +18,7 @@ class KeyValueWidget(QWidget):
         self.delete_button = QPushButton("Delete")
         self.key_list = QListWidget()
         self.value_list = QListWidget()
+        self.value_list.setEditTriggers(QListWidget.EditTrigger.SelectedClicked | QListWidget.EditTrigger.DoubleClicked | QListWidget.EditTrigger.AnyKeyPressed)
 
         self.init_ui()
 
@@ -48,10 +49,14 @@ class KeyValueWidget(QWidget):
 
         self.key_list.itemClicked.connect(self.slot_key_list_item_clicked)
         self.value_list.itemClicked.connect(self.slot_value_list_item_clicked)
-        self.value_list.itemDoubleClicked.connect(self.slot_value_list_item_double_clicked)
-        self.value_list.itemChanged.connect(lambda item: self.item_modified.emit(self.gen_all_pairs()))
+
+        self.value_list.itemChanged.connect(self.slot_value_list_item_changed)
+
+    def value_list_commitData(self, editor):
+        print('commitData')
 
     def slot_key_list_item_clicked(self, item):
+        print('key click')
         index = self.key_list.row(item)
         self.curr_selected_index = index
         self.value_list.setCurrentRow(index)
@@ -60,20 +65,31 @@ class KeyValueWidget(QWidget):
         self.key_input.setText(item.text())
         self.value_input.setPlainText(self.value_list.item(index).text())
 
+        self.value_input.clear()
+
     def slot_value_list_item_clicked(self, item):
+        print('value click')
         index = self.value_list.row(item)
         self.curr_selected_index = index
-        self.key_list.setCurrentRow(index)
-        # print(item.text(), index)
 
-        self.value_input.setPlainText(item.text())
-        self.key_input.setText(self.key_list.item(index).text())
-    
-    def slot_value_list_item_double_clicked(self, item):
-        item.setFlags(item.flags() | Qt.ItemIsEditable)
-        
+        # self.value_list.editItem(item)
         self.key_input.clear()
         self.value_input.clear()
+
+        self.key_list.setCurrentRow(index)
+
+    def slot_value_list_item_changed(self, item):        
+        print('changed', item.text())
+
+        self.item_modified.emit(self.gen_all_pairs())
+        
+        next_index = self.curr_selected_index + 1
+        if next_index >= self.key_list.count():
+            next_index = 0
+        
+        self.value_list.setCurrentRow(next_index)
+        self.key_list.setCurrentRow(next_index)
+        self.curr_selected_index = next_index
 
     def slot_add_pair(self):
         key = self.key_input.text()
@@ -81,7 +97,7 @@ class KeyValueWidget(QWidget):
 
         if not key or not value:
             return
-            
+
         k = self.key_list.findItems(key, Qt.MatchExactly)
         if k:
             index = self.key_list.row(k[0])
@@ -90,15 +106,16 @@ class KeyValueWidget(QWidget):
         else:
             self.key_list.addItem(key)
             self.value_list.addItem(value)
+            self.value_list.item(self.value_list.count() - 1).setFlags(Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         self.key_input.clear()
         self.value_input.clear()
-        
+
         self.item_modified.emit(self.gen_all_pairs())
-            
+
     def slot_delete_pair(self):
         if self.curr_selected_index < 0:
             return
-        
+
         self.key_list.takeItem(self.curr_selected_index)
         self.value_list.takeItem(self.curr_selected_index)
         self.curr_selected_index = -1
@@ -107,7 +124,7 @@ class KeyValueWidget(QWidget):
         self.value_list.clearSelection()
         self.key_input.clear()
         self.value_input.clear()
-        
+
         self.item_modified.emit(self.gen_all_pairs())
 
     def set_pairs(self, pairs:dict):
@@ -117,14 +134,18 @@ class KeyValueWidget(QWidget):
             # print(k, v)
             self.key_list.addItem(k)
             self.value_list.addItem(v)
+            self.value_list.item(self.value_list.count() - 1).setFlags(Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+            
+        self.slot_key_list_item_clicked(self.key_list.item(0))
+        self.slot_value_list_item_clicked(self.value_list.item(0))
 
-    def gen_all_pairs(self) -> dict:        
+    def gen_all_pairs(self) -> dict:
         rev = dict()
         for i in range(self.key_list.count()):
             rev[self.key_list.item(i).text()] = self.value_list.item(i).text()
-        
+
         return rev
-    
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
