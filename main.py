@@ -16,6 +16,17 @@ from kvwidget import KeyValueWidget
 from paddleocr import PaddleOCR
 import cv2
 
+
+#-----------------------------
+from PyQt5.QtCore import QLibraryInfo
+
+os.environ['NO_AT_BRIDGE'] = '1'
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
+    QLibraryInfo.PluginsPath)
+#-----------------------------
+
+
+
 class LabelIt( QWidget ):
 
     DEFAULT_DIR = '/home/marco/downloads/datasets/hostpital_cases/img_symlinks_1k/'
@@ -59,8 +70,8 @@ class LabelIt( QWidget ):
 
         _timer = QTimer()
         _timer.setInterval(10)
-        _timer.singleShot(100, lambda: self.choose_dir(self.DEFAULT_DIR))
-        _timer.start()
+        # _timer.singleShot(100, lambda: self.choose_dir(self.DEFAULT_DIR))
+        # _timer.start()
 
     def choose_dir(self, path=None):
         if not path:

@@ -1,4 +1,3 @@
-from turtle import position, window_width
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem, QGraphicsView, QFrame, QToolButton, QVBoxLayout, QHBoxLayout, QLineEdit, QWidget, QApplication, QFileDialog
 from PyQt5.QtGui import QColor, QBrush, QPixmap
@@ -25,11 +24,12 @@ class ImageViewer(QGraphicsView):
         self._scene.addItem(self._photo)
         self.setScene(self._scene)
 
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        # self.setInteractive(True)
 
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         self.setBackgroundBrush(QBrush(QColor(100, 100, 100)))
         self.setFrameShape(QFrame.Shape.NoFrame)
@@ -95,7 +95,10 @@ class ImageViewer(QGraphicsView):
 
     def wheelEvent(self, event):
         if not self.has_photo():
+            print('no photo')
             return
+        
+        super().wheelEvent(event)
 
         if event.angleDelta().y() > 0:
             factor = 1.1
@@ -105,6 +108,7 @@ class ImageViewer(QGraphicsView):
             self._zoom -= 1
 
         if self._zoom > 0:
+
             self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
             tf = self.transform()
             current_scale = min(tf.m11(), tf.m22())
@@ -113,7 +117,16 @@ class ImageViewer(QGraphicsView):
                 # self.parent().parent().setWindowTitle('zoom limited')
                 self._zoom -= 1
             else:
+                # old_pos = self.mapToScene(event.pos())
+
                 self.scale(factor, factor)
+
+                # new_pos = self.mapToScene(event.pos())
+                # delta = new_pos - old_pos
+                # print(delta.x(), delta.y())
+                # self.horizontalScrollBar().setValue(-int(delta.x()) + self.horizontalScrollBar().value())
+                # self.verticalScrollBar().setValue(int(delta.y()) + self.verticalScrollBar().value())
+
         elif self._zoom == 0:
             self.setDragMode(QGraphicsView.DragMode.NoDrag)
             self.fit_in_view()
@@ -186,25 +199,25 @@ class ImageViewer(QGraphicsView):
             # print(self._draw_box.rect())
             _rect = self._draw_box.rect()
             if _rect.x() < 0:
-                print('x < 0')
+                # print('x < 0')
                 self._draw_box.setRect(0, _rect.y(), _rect.width() + _rect.x(), _rect.height())
                 _rect = self._draw_box.rect()
             elif _rect.x() > self._photo.pixmap().width():
-                print('x > w')
+                # print('x > w')
                 return
             if _rect.y() < 0:
-                print('y < 0')
+                # print('y < 0')
                 self._draw_box.setRect(_rect.x(), 0, _rect.width(), _rect.height() + _rect.y())
                 _rect = self._draw_box.rect()
             elif _rect.y() > self._photo.pixmap().height():
                 self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), _rect.height() + _rect.y())
                 _rect = self._draw_box.rect()
             if _rect.x() + _rect.width() > self._photo.pixmap().width():
-                print('x + w > w')
+                # print('x + w > w')
                 self._draw_box.setRect(_rect.x(), _rect.y(), self._photo.pixmap().width() - _rect.x(), _rect.height())
                 _rect = self._draw_box.rect()
             if _rect.y() + _rect.height() > self._photo.pixmap().height():
-                print('y + h > h')
+                # print('y + h > h')
                 self._draw_box.setRect(_rect.x(), _rect.y(), _rect.width(), self._photo.pixmap().height() - _rect.y())
                 _rect = self._draw_box.rect()
 

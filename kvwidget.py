@@ -79,7 +79,7 @@ class KeyValueWidget(QWidget):
         self.key_list.setCurrentRow(index)
 
     def slot_value_list_item_changed(self, item):        
-        print('changed', item.text())
+        # print('changed', item.text())
 
         self.item_modified.emit(self.gen_all_pairs())
         
