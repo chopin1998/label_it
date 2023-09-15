@@ -128,11 +128,21 @@ class LabelIt( QWidget ):
         json.dump(item, open(json_file, 'w'), indent=4, ensure_ascii=False)
 
     def keyPressEvent(self, e):
+        super().keyPressEvent(e)
 
         if e.key() == Qt.Key.Key_Escape:
             self.image_viewer.clear_draw_box()
+        elif e.key() == Qt.Key.Key_R:
+            # rotate img, save it to file then reload it
+            self.image_viewer.clear_draw_box()
+            
+            img_file = os.path.join(self.image_path, self.images_list[self.image_index])
+            img = cv2.imread(img_file)
+            img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+            cv2.imwrite(img_file, img)
+            self.show_image(self.image_index)
+            pass
 
-        super().keyPressEvent(e)
 
     def slot_image_cropped(self, img):
 

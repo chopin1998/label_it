@@ -93,6 +93,17 @@ class ImageViewer(QGraphicsView):
                 self._draw_box_label.setPlainText(text)
             self._draw_box_label.setPos(self._draw_box.rect().x(), self._draw_box.rect().y())
 
+    def keyPressEvent(self, ev) -> None:
+        super().keyPressEvent(ev)
+
+        # if ev.key() == Qt.Key.Key_R:
+        #     # self.rotate(90)
+        #     # rotate image file, not pixmap
+        #     self.cv2_img = cv2.rotate(self.cv2_img, cv2.ROTATE_90_CLOCKWISE)
+        #     self.set_photo(QtGui.QPixmap.fromImage(QtGui.QImage(self.cv2_img.data, self.cv2_img.shape[1], self.cv2_img.shape[0], self.cv2_img.shape[1] * self.cv2_img.shape[2], QtGui.QImage.Format.Format_RGBA8888)))
+        #     self.fit_in_view()
+    
+
     def wheelEvent(self, event):
         if not self.has_photo():
             print('no photo')
